@@ -47,21 +47,28 @@ define(function (require, exports, module) {
                 annotation.params.push(param.name);
             });
             
-            // FIXME: Take into account case where return undefined.
-            // FIXME: Take into account case where return true or false.
             // Find and add return value.
             var foundReturnValue = new Walker.findNodeAfter(found.node, 0, 'ReturnStatement');
-            annotation.returnValue = foundReturnValue.node ? foundReturnValue.node.argument.name : undefined;
+            
+            if (foundReturnValue.node && foundReturnValue.node.argument) {
+                if (foundReturnValue.node.argument.name) {
+                    annotation.returnValue = foundReturnValue.node.argument.name;
+                } else if (foundReturnValue.node.argument.raw) {
+                    annotation.returnValue = foundReturnValue.node.argument.raw;
+                }
+            } else {
+                annotation.returnValue = undefined;
+            }
             
             // Set prefix (find first none whitespace character).
             var codeLine = editor._codeMirror.getLine(annotation.location.start.line - 1);
             annotation.prefix = codeLine.substr(0, codeLine.length - codeLine.trimLeft().length).replace(/[^\s\n]/g, ' ');
             
             // Build annotation string.
-            var jsdocString = generateString(annotation);
+            var annotationString = generateString(annotation);
 
             // Insert annotation string into editor.
-            insertAnnotation(jsdocString, annotation.location);
+            insertAnnotation(annotationString, annotation.location);
             
             return true;
         }
@@ -96,7 +103,7 @@ define(function (require, exports, module) {
     
     /**
      * @desc Inserts jsdoc to document.
-     * @param {string} jsdocString
+     * @param {string} annotationString
      * @param {object} loc location of the function
      */
     function insertAnnotation(annotationString, loc) {
@@ -110,10 +117,10 @@ define(function (require, exports, module) {
         // Remove annotationSnippet from current line.
         removeSnippet(annotationSnippet);
         
-        // Place jsdocString in the editor.
+        // Place annotationString in the editor.
         editor._codeMirror.replaceRange(annotationString, position);
         
-        // Jumb to line of jsdocString.
+        // Jumb to line of annotationString.
         editor._codeMirror.setCursor(position);
         
         // Focus on active pane,
