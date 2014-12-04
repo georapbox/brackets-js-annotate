@@ -5,11 +5,13 @@ define(function (require, exports, module) {
         EditorManager = brackets.getModule('editor/EditorManager'),
         MainViewManager = brackets.getModule('view/MainViewManager'),
         Acorn_loose = require('thirdparty/acorn/acorn_loose'),
-        Walker = require('thirdparty/acorn/util/walk');
+        Walker = require('thirdparty/acorn/util/walk'),
+        annotationSnippet = '//';
     
     /**
      * @desc Create a jsdoc annotation of the next function
      *       found (using a js parser) an insert it one line above.
+     * @returns {Boolean}
      */
     function annotate() {
         var editor = EditorManager.getCurrentFullEditor(),
@@ -105,8 +107,8 @@ define(function (require, exports, module) {
                 ch: 0
             };
         
-        // Remove "/**" snippet from current line.
-        removeSnippet('/**');
+        // Remove annotationSnippet from current line.
+        removeSnippet(annotationSnippet);
         
         // Place jsdocString in the editor.
         editor._codeMirror.replaceRange(annotationString, position);
@@ -139,11 +141,12 @@ define(function (require, exports, module) {
 	 * @param {Object} event
 	 */
 	function keyEventHandler($event, editor, event) {
+        // Check if event type is "keydown" and key is "Tab".
         if ((event.type === 'keydown') && (event.keyCode === KeyEvent.DOM_VK_TAB)) {
 			var cursorPosition = editor.getCursorPos(),
             	line = editor.document.getLine(cursorPosition.line);
 			
-			if ($.trim(line) === '/**') {
+			if ($.trim(line) === annotationSnippet) {
 				if (annotate()) {
                     event.preventDefault();   
                 }
@@ -152,7 +155,7 @@ define(function (require, exports, module) {
     }
     
 	/**
-	 * @desc
+	 * @desc Removes key events from lost editor, adds key events to focused editor.
 	 * @param {type} $event
 	 * @param {type} focusedEditor
 	 * @param {type} lostEditor
