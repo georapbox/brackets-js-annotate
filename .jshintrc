@@ -1,0 +1,19 @@
+{
+	"forin": true,
+	"immed": true,
+	"newcap": true,
+	"noempty": true,
+	"plusplus": true,
+	"quotmark": "single",
+	"undef": true,
+	"unused": "vars",
+	"strict": true,
+	"browser": true,
+	"devel": true,
+	"node": true,
+    "predef": [
+        "brackets",
+        "define",
+        "$"
+    ]
+}

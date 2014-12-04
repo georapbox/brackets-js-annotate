@@ -1,0 +1,22 @@
+{
+    "name": "brackets-js-annotate",
+    "title": "JS Annotate",
+    "description": "Add annotations to javascript functions.",
+    "homepage": "https://github.com/georapbox/brackets-js-annotate",
+    "version": "0.0.1",
+    "author": "George Raptis <georapbox@gmail.com>",
+    "license": "MIT",
+    "repository": {
+		"type": "git",
+		"url": "https://github.com/georapbox/brackets-js-annotate"
+	},
+    "keywords": [
+        "brackets",
+        "javascript",
+        "annotate",
+        "functions"
+    ],
+    "engines": {
+        "brackets": ">=0.35.0"
+    }
+}
