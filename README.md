@@ -1,6 +1,8 @@
-##Brackets JSDoc Annotate Extension
+##Brackets JS Annotate Extension
 
-Extension for [Brackets](https://github.com/adobe/brackets) editor that adds JSDoc annotations to source code.
+**(Under development)**
+
+Extension for [Brackets](https://github.com/adobe/brackets) editor that adds annotations to javascript functions.
 
 ##Installation
 
