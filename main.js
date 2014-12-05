@@ -4,13 +4,13 @@ define(function (require, exports, module) {
     var KeyEvent = brackets.getModule('utils/KeyEvent'),
         EditorManager = brackets.getModule('editor/EditorManager'),
         MainViewManager = brackets.getModule('view/MainViewManager'),
-        Acorn_loose = require('thirdparty/acorn/acorn_loose'),
+        AcornLoose = require('thirdparty/acorn/acorn_loose'),
         Walker = require('thirdparty/acorn/util/walk'),
         annotationSnippet = '//';
     
     /**
-     * @desc Create a jsdoc annotation of the next function
-     *       found (using a js parser) an insert it one line above.
+     * @desc Creates annotation of the function found in next line
+     *       and inserts it one line above.
      * @returns {Boolean}
      */
     function annotate() {
@@ -21,28 +21,30 @@ define(function (require, exports, module) {
         pos.ch = 0;
         
         // Get the text from the start of the document to the current cursor position and count it's length'.
-        var txtTo = editor._codeMirror.getRange({ line: 0, ch:0 }, pos),
+        var txtTo = editor._codeMirror.getRange({ line: 0, ch: 0 }, pos),
             cursorPosition = txtTo.length,
             // Get document text.
             txtFull = editor._codeMirror.getValue(),
             // Parse text.
-            acornTxtFull = Acorn_loose.parse_dammit(txtFull, {
+            // jscs: disable requireCamelCaseOrUpperCaseIdentifiers
+            parsed = AcornLoose.parse_dammit(txtFull, {
                 locations: true
             }),
+            // jscs: enable requireCamelCaseOrUpperCaseIdentifiers
             // Find next function.
-            found = new Walker.findNodeAfter(acornTxtFull, cursorPosition, 'Function');
+            found = new Walker.findNodeAfter(parsed, cursorPosition, 'Function');
         
+        // If a result, build annotation.
         if (found && found.node && found.node.loc.start.line === pos.line + 2) {
-            // There was a result, so build js annotation.
-            var annotation = {};
+            var annotation = {
+                location: found.node.loc,
+                prefix: '',
+                name: found.node.id ? found.node.id.name : null,
+                params: [],
+                returnValue: undefined
+            };
             
-            annotation.location = found.node.loc;
-            annotation.prefix = '';
-            annotation.name = found.node.id ? found.node.id.name : null;
-            annotation.params = [];
-            annotation.returnValue = undefined;
-            
-            // Add parameters to the jsdoc object.
+            // Add parameters to the annotation object.
             found.node.params.forEach(function (param) {
                 annotation.params.push(param.name);
             });
@@ -76,15 +78,15 @@ define(function (require, exports, module) {
     }
     
     /**
-     * @desc Create the string representation of the jsdoc object. 
-     * @param {object} jsdoc input
-     * @returns {string} representation of the jsdoc object
+     * @desc Generates the string representation of the annotation object. 
+     * @param {Object} annotation Annotation object input.
+     * @returns {String} Representation of the annotation object.
      */
     function generateString(annotation) {
         var annotationString  = annotation.prefix + '/**\n';
         
         // Add description.
-        annotationString += annotation.prefix + ' * @desc\n';
+        annotationString += annotation.prefix + ' * @desc \n';
         
         // Add parameters.
         annotation.params.forEach(function (param) {
@@ -102,9 +104,9 @@ define(function (require, exports, module) {
     }
     
     /**
-     * @desc Inserts jsdoc to document.
-     * @param {string} annotationString
-     * @param {object} loc location of the function
+     * @desc Inserts annotation string to document.
+     * @param {string} annotationString  Representation of the annotation object.
+     * @param {object} loc Location of the function to annotate.
      */
     function insertAnnotation(annotationString, loc) {
         // Get editor instance
@@ -120,8 +122,11 @@ define(function (require, exports, module) {
         // Place annotationString in the editor.
         editor._codeMirror.replaceRange(annotationString, position);
         
-        // Jumb to line of annotationString.
-        editor._codeMirror.setCursor(position);
+        // Move cursor on description (@desc) line.
+        editor._codeMirror.setCursor({
+            line: position.line + 1,
+            ch: editor.document.getLine(position.line + 1).length
+        });
         
         // Focus on active pane,
         MainViewManager.focusActivePane();
@@ -129,7 +134,7 @@ define(function (require, exports, module) {
     
     /**
      * @desc Removes user input snippet from current line.
-     * @param {String} snippet
+     * @param {String} snippet Snippet input that triggers annotation.
      */
     function removeSnippet(snippet) {
         var editor  = EditorManager.getCurrentFullEditor(),
@@ -142,12 +147,12 @@ define(function (require, exports, module) {
     }
     
     /**
-	 * @desc
+	 * @desc The event listener that triggers annotation.
 	 * @param {Object} $event
 	 * @param {Object} editor
 	 * @param {Object} event
 	 */
-	function keyEventHandler($event, editor, event) {
+	function keyEventListener($event, editor, event) {
         // Check if event type is "keydown" and key is "Tab".
         if ((event.type === 'keydown') && (event.keyCode === KeyEvent.DOM_VK_TAB)) {
 			var cursorPosition = editor.getCursorPos(),
@@ -169,11 +174,11 @@ define(function (require, exports, module) {
 	 */
 	function activeEditorChangeHandler($event, focusedEditor, lostEditor) {
 		if (lostEditor) {
-            $(lostEditor).off('keyEvent', keyEventHandler);
+            $(lostEditor).off('keyEvent', keyEventListener);
         }
         
 		if (focusedEditor) {
-            $(focusedEditor).on('keyEvent', keyEventHandler);
+            $(focusedEditor).on('keyEvent', keyEventListener);
         }
 	}
     
