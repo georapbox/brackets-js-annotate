@@ -122,7 +122,7 @@ define(function (require, exports, module) {
         // Place annotationString in the editor.
         editor._codeMirror.replaceRange(annotationString, position);
         
-        // Move cursor on description (@desc) line.
+        // Move cursor on description (@desc) line to edit.
         editor._codeMirror.setCursor({
             line: position.line + 1,
             ch: editor.document.getLine(position.line + 1).length
