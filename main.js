@@ -156,12 +156,19 @@ define(function (require, exports, module) {
         // Check if event type is "keydown" and key is "Tab".
         if ((event.type === 'keydown') && (event.keyCode === KeyEvent.DOM_VK_TAB)) {
 			var cursorPosition = editor.getCursorPos(),
-            	line = editor.document.getLine(cursorPosition.line);
+            	line = editor.document.getLine(cursorPosition.line),
+                rtrimmedLine = line.replace(/\s+$/, '');
 			
+            // Disable annotation if cursor is not exactley after
+            // the annotation snippet, with no psace after it.
+            if (cursorPosition.ch !== rtrimmedLine.length) {
+                return false;
+            }
+            
+            // Proceed to annotation and prevent default
+            // behaviour of "TAB" key stroke.
 			if ($.trim(line) === annotationSnippet) {
-				if (annotate()) {
-                    event.preventDefault();   
-                }
+				annotate() && event.preventDefault();
 			}
 		}
     }
