@@ -1,12 +1,46 @@
 define(function (require, exports, module) {
     'use strict';
     
-    var KeyEvent = brackets.getModule('utils/KeyEvent'),
+    var AppInit = brackets.getModule('utils/AppInit'),
+        KeyEvent = brackets.getModule('utils/KeyEvent'),
         EditorManager = brackets.getModule('editor/EditorManager'),
         MainViewManager = brackets.getModule('view/MainViewManager'),
+        PreferencesManager = brackets.getModule('preferences/PreferencesManager'),
+        Menus = brackets.getModule('command/Menus'),
+        CommandManager = brackets.getModule('command/CommandManager'),
+        
         AcornLoose = require('thirdparty/acorn/acorn_loose'),
         Walker = require('thirdparty/acorn/util/walk'),
-        annotationSnippet = '//';
+        
+        annotationSnippet = '//',
+        
+        isEnabled = true,
+        prefs = PreferencesManager.getExtensionPrefs('georapbox.js-annotate'),
+    
+        COMMAND_NAME = 'Enable JS Annotate',
+        COMMAND_ID = 'georapbox.js.annotate';
+    
+    // Enable the extension by default (user can disable it later if needed).
+    prefs.definePreference('enabled', 'boolean', isEnabled);
+    
+    /**
+     * @desc Enables/Disables the extension.
+     */
+    function toggleExtensionAvailability() {
+        isEnabled = !isEnabled;                                  // Toggle between true/false.
+        prefs.set('enabled', isEnabled);                         // Set preferences file.
+        prefs.save();                                            // Save preferences file.
+        CommandManager.get(COMMAND_ID).setChecked(isEnabled);    // Check/Uncheck Edit Menu.
+        CommandManager.execute('app.reload');
+    }
+    
+    /**
+     * @desc Applies preferences.
+     */
+    function applyPreferences() {
+        isEnabled = prefs.get('enabled');                        // Get extension availability from preferences file.
+        CommandManager.get(COMMAND_ID).setChecked(isEnabled);    // Check/Uncheck Edit Menu.
+    }
     
     /**
      * @desc Creates annotation of the function found in next line
@@ -16,12 +50,12 @@ define(function (require, exports, module) {
     function annotate() {
         var editor = EditorManager.getCurrentFullEditor(),
             // Get cursor position and set it to the beginning of the line.
-            pos = editor.getCursorPos();
+            position = editor.getCursorPos();
     
-        pos.ch = 0;
+        position.ch = 0;
         
         // Get the text from the start of the document to the current cursor position and count it's length'.
-        var txtTo = editor._codeMirror.getRange({ line: 0, ch: 0 }, pos),
+        var txtTo = editor._codeMirror.getRange({ line: 0, ch: 0 }, position),
             cursorPosition = txtTo.length,
             // Get document text.
             txtFull = editor._codeMirror.getValue(),
@@ -35,7 +69,7 @@ define(function (require, exports, module) {
             found = new Walker.findNodeAfter(parsed, cursorPosition, 'Function');
         
         // If a result, build annotation.
-        if (found && found.node && found.node.loc.start.line === pos.line + 2) {
+        if (found && found.node && found.node.loc.start.line === position.line + 2) {
             var annotation = {
                 location: found.node.loc,
                 prefix: '',
@@ -153,24 +187,28 @@ define(function (require, exports, module) {
 	 * @param {Object} event
 	 */
 	function keyEventListener($event, editor, event) {
-        // Check if event type is "keydown" and key is "Tab".
-        if ((event.type === 'keydown') && (event.keyCode === KeyEvent.DOM_VK_TAB)) {
-			var cursorPosition = editor.getCursorPos(),
-            	line = editor.document.getLine(cursorPosition.line),
-                rtrimmedLine = line.replace(/\s+$/, '');
-			
-            // Disable annotation if cursor is not exactley after
-            // the annotation snippet, with no psace after it.
-            if (cursorPosition.ch !== rtrimmedLine.length) {
-                return false;
+        isEnabled = prefs.get('enabled');
+        
+        if (isEnabled) {
+            // Check if event type is "keydown" and key is "Tab".
+            if ((event.type === 'keydown') && (event.keyCode === KeyEvent.DOM_VK_TAB)) {
+                var cursorPosition = editor.getCursorPos(),
+                    line = editor.document.getLine(cursorPosition.line),
+                    rtrimmedLine = line.replace(/\s+$/, '');
+
+                // Disable annotation if cursor is not exactley after
+                // the annotation snippet, with no psace after it.
+                if (cursorPosition.ch !== rtrimmedLine.length) {
+                    return false;
+                }
+
+                // Proceed to annotation and prevent default
+                // behaviour of "TAB" key stroke.
+                if ($.trim(line) === annotationSnippet) {
+                    annotate() && event.preventDefault();
+                }
             }
-            
-            // Proceed to annotation and prevent default
-            // behaviour of "TAB" key stroke.
-			if ($.trim(line) === annotationSnippet) {
-				annotate() && event.preventDefault();
-			}
-		}
+        }    
     }
     
 	/**
@@ -180,15 +218,35 @@ define(function (require, exports, module) {
 	 * @param {type} lostEditor
 	 */
 	function activeEditorChangeHandler($event, focusedEditor, lostEditor) {
-		if (lostEditor) {
+        if (lostEditor) {
             $(lostEditor).off('keyEvent', keyEventListener);
         }
-        
-		if (focusedEditor) {
+
+        if (focusedEditor) {
             $(focusedEditor).on('keyEvent', keyEventListener);
-        }
+        }    
 	}
-    
-    // Annotate on keystroke.
-    $(EditorManager).on('activeEditorChange', activeEditorChangeHandler);
+
+    // Initialize extension.
+    AppInit.appReady(function () {
+        // Register toggle command and add it to Edit menu.
+        CommandManager.register(COMMAND_NAME, COMMAND_ID, toggleExtensionAvailability);
+        Menus.getMenu(Menus.AppMenuBar.EDIT_MENU).addMenuItem(COMMAND_ID);
+        
+        // Get extension availability from preferences file.
+        isEnabled = prefs.get('enabled');
+        
+        
+        applyPreferences();
+        
+        // Annotate on keystroke.
+        if (isEnabled === true) { // TODO: On enable/disable extension force refresh.
+            $(EditorManager).on('activeEditorChange', activeEditorChangeHandler);
+        }
+        
+        // Apply preferences.
+        prefs.on('change', function () {
+            applyPreferences();
+        });
+    });
 });
