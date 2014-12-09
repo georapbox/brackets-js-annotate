@@ -28,3 +28,6 @@ Extension for [Brackets](https://github.com/adobe/brackets) editor that adds ann
 
 ####Enable/Disable the extension
 Check or uncheck the **"Enable JS Annotate"** option under `Edit` menu.
+
+###CHANGELOG
+Read on [CHANGELOG.md](https://github.com/georapbox/brackets-js-annotate/blob/master/CHANGELOG.md)

@@ -38,10 +38,17 @@ define(function (require, exports, module) {
         CommandManager.execute('app.reload');                    // Reload Brackets.
     }
     
+	/**
+	 * @desc Displays a dialog that prompts user to reload Brackets
+	 *       in order to enable or disable the extension.
+	 * @returns {Object} promise
+	 */
 	function showRefreshDialog() {
 		var template,
 			promise;
 		
+		// Pick the right template depending on
+		// the current state of te extension (enabled or disabled).
 		switch (isEnabled) {
 			case true:
 				template = DisableDialogTemplate;
@@ -51,8 +58,10 @@ define(function (require, exports, module) {
 				break;
 		}
 		
+		// Display the prompt dialog.
 		promise = Dialogs.showModalDialogUsingTemplate(Mustache.render(template, Strings)).
 			done(function (id) {
+				// If "OK" button is clicked...
 				if (id === Dialogs.DIALOG_BTN_OK) {
 					toggleExtensionAvailability();
 				}
@@ -123,7 +132,7 @@ define(function (require, exports, module) {
                 annotation.returnValue = undefined;
             }
             
-            // Set prefix (find first none whitespace character).
+            // Set prefix.
             var codeLine = editor._codeMirror.getLine(annotation.location.start.line - 1);
             annotation.prefix = codeLine.substr(0, codeLine.length - codeLine.trimLeft().length).replace(/[^\s\n]/g, ' ');
             
