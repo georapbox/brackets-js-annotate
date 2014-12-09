@@ -8,6 +8,10 @@ define(function (require, exports, module) {
         PreferencesManager = brackets.getModule('preferences/PreferencesManager'),
         Menus = brackets.getModule('command/Menus'),
         CommandManager = brackets.getModule('command/CommandManager'),
+		Dialogs = brackets.getModule('widgets/Dialogs'),
+		Strings = require('strings'),
+		EnableDialogTemplate = require('text!html/enable_prompt_dialog.html'),
+		DisableDialogTemplate = require('text!html/disable_prompt_dialog.html'),
         
         AcornLoose = require('thirdparty/acorn/acorn_loose'),
         Walker = require('thirdparty/acorn/util/walk'),
@@ -17,7 +21,7 @@ define(function (require, exports, module) {
         isEnabled = true,
         prefs = PreferencesManager.getExtensionPrefs('georapbox.js-annotate'),
     
-        COMMAND_NAME = 'Enable JS Annotate',
+        COMMAND_NAME = Strings.COMMAND_NAME,
         COMMAND_ID = 'georapbox.js.annotate';
     
     // Enable the extension by default (user can disable it later if needed).
@@ -31,9 +35,32 @@ define(function (require, exports, module) {
         prefs.set('enabled', isEnabled);                         // Set preferences file.
         prefs.save();                                            // Save preferences file.
         CommandManager.get(COMMAND_ID).setChecked(isEnabled);    // Check/Uncheck Edit Menu.
-        CommandManager.execute('app.reload');
+        CommandManager.execute('app.reload');                    // Reload Brackets.
     }
     
+	function showRefreshDialog() {
+		var template,
+			promise;
+		
+		switch (isEnabled) {
+			case true:
+				template = DisableDialogTemplate;
+				break;
+			case false:
+				template = EnableDialogTemplate;
+				break;
+		}
+		
+		promise = Dialogs.showModalDialogUsingTemplate(Mustache.render(template, Strings)).
+			done(function (id) {
+				if (id === Dialogs.DIALOG_BTN_OK) {
+					toggleExtensionAvailability();
+				}
+			});
+		
+		return promise;
+	}
+	
     /**
      * @desc Applies preferences.
      */
@@ -226,11 +253,11 @@ define(function (require, exports, module) {
             $(focusedEditor).on('keyEvent', keyEventListener);
         }    
 	}
-
+	
     // Initialize extension.
     AppInit.appReady(function () {
         // Register toggle command and add it to Edit menu.
-        CommandManager.register(COMMAND_NAME, COMMAND_ID, toggleExtensionAvailability);
+        CommandManager.register(COMMAND_NAME, COMMAND_ID, showRefreshDialog);
         Menus.getMenu(Menus.AppMenuBar.EDIT_MENU).addMenuItem(COMMAND_ID);
         
         // Get extension availability from preferences file.
@@ -240,7 +267,7 @@ define(function (require, exports, module) {
         applyPreferences();
         
         // Annotate on keystroke.
-        if (isEnabled === true) { // TODO: On enable/disable extension force refresh.
+        if (isEnabled === true) {
             $(EditorManager).on('activeEditorChange', activeEditorChangeHandler);
         }
         
