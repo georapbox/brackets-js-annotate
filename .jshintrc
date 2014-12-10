@@ -11,9 +11,11 @@
 	"browser": true,
 	"devel": true,
 	"node": true,
+	"expr": true,
     "predef": [
         "brackets",
         "define",
-        "$"
+        "$",
+        "Mustache"
     ]
 }

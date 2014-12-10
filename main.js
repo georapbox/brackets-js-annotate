@@ -10,8 +10,7 @@ define(function (require, exports, module) {
         CommandManager = brackets.getModule('command/CommandManager'),
 		Dialogs = brackets.getModule('widgets/Dialogs'),
 		Strings = require('strings'),
-		EnableDialogTemplate = require('text!html/enable_prompt_dialog.html'),
-		DisableDialogTemplate = require('text!html/disable_prompt_dialog.html'),
+		PromptDialogTemplate = require('text!html/prompt_dialog.html'),
         
         AcornLoose = require('thirdparty/acorn/acorn_loose'),
         Walker = require('thirdparty/acorn/util/walk'),
@@ -44,22 +43,23 @@ define(function (require, exports, module) {
 	 * @returns {Object} promise
 	 */
 	function showRefreshDialog() {
-		var template,
-			promise;
-		
-		// Pick the right template depending on
-		// the current state of te extension (enabled or disabled).
-		switch (isEnabled) {
+		var promise;
+        
+        switch (isEnabled) {
 			case true:
-				template = DisableDialogTemplate;
+				Strings.PROMPT_DIALOG_TITLE = Strings.DISABLE_PROMPT_DIALOG_TITLE;
+                Strings.PROMPT_DIALOG_BODY = Strings.DISABLE_PROMPT_DIALOG_BODY;
+                Strings.DIALOG_OK = Strings.DISABLE_DIALOG_OK;
 				break;
 			case false:
-				template = EnableDialogTemplate;
-				break;
+                Strings.PROMPT_DIALOG_TITLE = Strings.ENABLE_PROMPT_DIALOG_TITLE;
+				Strings.PROMPT_DIALOG_BODY = Strings.ENABLE_PROMPT_DIALOG_BODY;
+				Strings.DIALOG_OK = Strings.ENABLE_DIALOG_OK;    
+                break;
 		}
 		
 		// Display the prompt dialog.
-		promise = Dialogs.showModalDialogUsingTemplate(Mustache.render(template, Strings)).
+		promise = Dialogs.showModalDialogUsingTemplate(Mustache.render(PromptDialogTemplate, Strings)).
 			done(function (id) {
 				// If "OK" button is clicked...
 				if (id === Dialogs.DIALOG_BTN_OK) {
