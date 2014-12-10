@@ -21,8 +21,8 @@ Extension for [Brackets](https://github.com/adobe/brackets) editor that adds ann
 
 ####How to use
 1. Place the cursor one line above the function you want to annotate
-2. Type `//`
-3. Hit the `TAB` key
+2. Type `/**`
+3. Hit the `RETURN` key
 
 ![Screencast](https://github.com/georapbox/brackets-js-annotate/blob/master/screencast.gif)
 

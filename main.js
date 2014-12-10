@@ -15,7 +15,7 @@ define(function (require, exports, module) {
         AcornLoose = require('thirdparty/acorn/acorn_loose'),
         Walker = require('thirdparty/acorn/util/walk'),
         
-        annotationSnippet = '//',
+        annotationSnippet = '/**',
         
         isEnabled = true,
         prefs = PreferencesManager.getExtensionPrefs('georapbox.js-annotate'),
@@ -89,6 +89,11 @@ define(function (require, exports, module) {
             position = editor.getCursorPos();
     
         position.ch = 0;
+        
+        // ** IMPORTANT ** 
+        // Make sure to remove the "/**" snippet typed by user,
+        // so as the parser does not recognise it as open node comment.
+        manipulateSnippet(annotationSnippet, '');
         
         // Get the text from the start of the document to the current cursor position and count it's length'.
         var txtTo = editor._codeMirror.getRange({ line: 0, ch: 0 }, position),
@@ -186,9 +191,6 @@ define(function (require, exports, module) {
                 ch: 0
             };
         
-        // Remove annotationSnippet from current line.
-        removeSnippet(annotationSnippet);
-        
         // Place annotationString in the editor.
         editor._codeMirror.replaceRange(annotationString, position);
         
@@ -201,16 +203,17 @@ define(function (require, exports, module) {
         // Focus on active pane,
         MainViewManager.focusActivePane();
     }
-    
+  
     /**
-     * @desc Removes user input snippet from current line.
+     * @desc Gets user input snippet and replaces with replacement string.
      * @param {String} snippet Snippet input that triggers annotation.
+     * @param {String} replacement The string we want to replace the snippet with.
      */
-    function removeSnippet(snippet) {
+    function manipulateSnippet(snippet, replacement) {
         var editor  = EditorManager.getCurrentFullEditor(),
             cursorPosition = editor.getCursorPos();
         
-         editor.document.replaceRange('', {
+        editor.document.replaceRange(replacement, {
             line: cursorPosition.line,
             ch: cursorPosition.ch - snippet.length
         }, cursorPosition);
@@ -226,8 +229,8 @@ define(function (require, exports, module) {
         isEnabled = prefs.get('enabled');
         
         if (isEnabled) {
-            // Check if event type is "keydown" and key is "Tab".
-            if ((event.type === 'keydown') && (event.keyCode === KeyEvent.DOM_VK_TAB)) {
+            // Check if event type is "keydown" and key is "RETURN".
+            if ((event.type === 'keydown') && (event.keyCode === KeyEvent.DOM_VK_RETURN)) {
                 var cursorPosition = editor.getCursorPos(),
                     line = editor.document.getLine(cursorPosition.line),
                     rtrimmedLine = line.replace(/\s+$/, '');
@@ -239,7 +242,7 @@ define(function (require, exports, module) {
                 }
 
                 // Proceed to annotation and prevent default
-                // behaviour of "TAB" key stroke.
+                // behaviour of "RETURN" key stroke.
                 if ($.trim(line) === annotationSnippet) {
                     annotate() && event.preventDefault();
                 }
@@ -272,17 +275,16 @@ define(function (require, exports, module) {
         // Get extension availability from preferences file.
         isEnabled = prefs.get('enabled');
         
-        
+        // Apply preferences.
         applyPreferences();
+        
+        prefs.on('change', function () {
+            applyPreferences();
+        });
         
         // Annotate on keystroke.
         if (isEnabled === true) {
             $(EditorManager).on('activeEditorChange', activeEditorChangeHandler);
         }
-        
-        // Apply preferences.
-        prefs.on('change', function () {
-            applyPreferences();
-        });
     });
 });
