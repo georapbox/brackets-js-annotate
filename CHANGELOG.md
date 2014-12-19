@@ -1,5 +1,8 @@
 ##Changelog
 
+###0.0.6
+- Update keyEvent listener as deprecated in Brackets 1.1.0
+
 ###0.0.5
 - Annotate function using snippet `\**` + `RETURN` instead of `//` + `TAB`.
 

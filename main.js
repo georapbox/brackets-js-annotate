@@ -2,7 +2,6 @@ define(function (require, exports, module) {
     'use strict';
     
     var AppInit = brackets.getModule('utils/AppInit'),
-        KeyEvent = brackets.getModule('utils/KeyEvent'),
         EditorManager = brackets.getModule('editor/EditorManager'),
         MainViewManager = brackets.getModule('view/MainViewManager'),
         PreferencesManager = brackets.getModule('preferences/PreferencesManager'),
@@ -230,7 +229,7 @@ define(function (require, exports, module) {
         
         if (isEnabled) {
             // Check if event type is "keydown" and key is "RETURN".
-            if ((event.type === 'keydown') && (event.keyCode === KeyEvent.DOM_VK_RETURN)) {
+            if ((event.type === 'keydown') && (event.keyCode === 13)) {
                 var cursorPosition = editor.getCursorPos(),
                     line = editor.document.getLine(cursorPosition.line),
                     rtrimmedLine = line.replace(/\s+$/, '');
@@ -258,11 +257,11 @@ define(function (require, exports, module) {
 	 */
 	function activeEditorChangeHandler($event, focusedEditor, lostEditor) {
         if (lostEditor) {
-            $(lostEditor).off('keyEvent', keyEventListener);
+            $(lostEditor).off('keydown', keyEventListener);
         }
 
         if (focusedEditor) {
-            $(focusedEditor).on('keyEvent', keyEventListener);
+            $(focusedEditor).on('keydown', keyEventListener);
         }    
 	}
 	
