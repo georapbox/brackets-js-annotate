@@ -1,5 +1,10 @@
 ##Changelog
 
+###0.0.7
+- Fix broken "Return" statements.
+- Fix tiny issue of adding an empty line before annotation.
+- Remove "@desc" from the description line.
+
 ###0.0.6
 - Update keyEvent listener as deprecated in Brackets 1.1.0
 

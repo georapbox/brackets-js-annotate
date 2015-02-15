@@ -1,6 +1,6 @@
 define(function (require, exports, module) {
     'use strict';
-    
+
     var AppInit = brackets.getModule('utils/AppInit'),
         EditorManager = brackets.getModule('editor/EditorManager'),
         MainViewManager = brackets.getModule('view/MainViewManager'),
@@ -10,23 +10,23 @@ define(function (require, exports, module) {
 		Dialogs = brackets.getModule('widgets/Dialogs'),
 		Strings = require('strings'),
 		PromptDialogTemplate = require('text!html/prompt_dialog.html'),
-        
+
         AcornLoose = require('thirdparty/acorn/acorn_loose'),
         Walker = require('thirdparty/acorn/util/walk'),
-        
+
         annotationSnippet = '/**',
-        
+
         isEnabled = true,
         prefs = PreferencesManager.getExtensionPrefs('georapbox.js-annotate'),
-    
+
         COMMAND_NAME = Strings.COMMAND_NAME,
         COMMAND_ID = 'georapbox.js.annotate';
-    
+
     // Enable the extension by default (user can disable it later if needed).
     prefs.definePreference('enabled', 'boolean', isEnabled);
-    
+
     /**
-     * @desc Enables/Disables the extension.
+     * Enables/Disables the extension.
      */
     function toggleExtensionAvailability() {
         isEnabled = !isEnabled;                                  // Toggle between true/false.
@@ -35,15 +35,15 @@ define(function (require, exports, module) {
         CommandManager.get(COMMAND_ID).setChecked(isEnabled);    // Check/Uncheck Edit Menu.
         CommandManager.execute('app.reload');                    // Reload Brackets.
     }
-    
+
 	/**
-	 * @desc Displays a dialog that prompts user to reload Brackets
-	 *       in order to enable or disable the extension.
+	 * Displays a dialog that prompts user to reload Brackets
+	 * in order to enable or disable the extension.
 	 * @returns {Object} promise
 	 */
 	function showRefreshDialog() {
 		var promise;
-        
+
         switch (isEnabled) {
 			case true:
 				Strings.PROMPT_DIALOG_TITLE = Strings.DISABLE_PROMPT_DIALOG_TITLE;
@@ -53,10 +53,10 @@ define(function (require, exports, module) {
 			case false:
                 Strings.PROMPT_DIALOG_TITLE = Strings.ENABLE_PROMPT_DIALOG_TITLE;
 				Strings.PROMPT_DIALOG_BODY = Strings.ENABLE_PROMPT_DIALOG_BODY;
-				Strings.DIALOG_OK = Strings.ENABLE_DIALOG_OK;    
+				Strings.DIALOG_OK = Strings.ENABLE_DIALOG_OK;
                 break;
 		}
-		
+
 		// Display the prompt dialog.
 		promise = Dialogs.showModalDialogUsingTemplate(Mustache.render(PromptDialogTemplate, Strings)).
 			done(function (id) {
@@ -65,35 +65,35 @@ define(function (require, exports, module) {
 					toggleExtensionAvailability();
 				}
 			});
-		
+
 		return promise;
 	}
-	
+
     /**
-     * @desc Applies preferences.
+     * Applies preferences.
      */
     function applyPreferences() {
         isEnabled = prefs.get('enabled');                        // Get extension availability from preferences file.
         CommandManager.get(COMMAND_ID).setChecked(isEnabled);    // Check/Uncheck Edit Menu.
     }
-    
+
     /**
-     * @desc Creates annotation of the function found in next line
-     *       and inserts it one line above.
+     * Creates annotation of the function found in next line
+     * and inserts it one line above.
      * @returns {Boolean}
      */
     function annotate() {
         var editor = EditorManager.getCurrentFullEditor(),
             // Get cursor position and set it to the beginning of the line.
             position = editor.getCursorPos();
-    
+
         position.ch = 0;
-        
-        // ** IMPORTANT ** 
+
+        // ** IMPORTANT **
         // Make sure to remove the "/**" snippet typed by user,
         // so as the parser does not recognise it as open node comment.
         manipulateSnippet(annotationSnippet, '');
-        
+
         // Get the text from the start of the document to the current cursor position and count it's length'.
         var txtTo = editor._codeMirror.getRange({ line: 0, ch: 0 }, position),
             cursorPosition = txtTo.length,
@@ -107,7 +107,7 @@ define(function (require, exports, module) {
             // jscs: enable requireCamelCaseOrUpperCaseIdentifiers
             // Find next function.
             found = new Walker.findNodeAfter(parsed, cursorPosition, 'Function');
-        
+
         // If a result, build annotation.
         if (found && found.node && found.node.loc.start.line === position.line + 2) {
             var annotation = {
@@ -117,68 +117,70 @@ define(function (require, exports, module) {
                 params: [],
                 returnValue: undefined
             };
-            
+
             // Add parameters to the annotation object.
             found.node.params.forEach(function (param) {
                 annotation.params.push(param.name);
             });
-            
+
             // Find and add return value.
             var foundReturnValue = new Walker.findNodeAfter(found.node, 0, 'ReturnStatement');
-            
+
             if (foundReturnValue.node && foundReturnValue.node.argument) {
-                if (foundReturnValue.node.argument.name) {
-                    annotation.returnValue = foundReturnValue.node.argument.name;
-                } else if (foundReturnValue.node.argument.raw) {
-                    annotation.returnValue = foundReturnValue.node.argument.raw;
-                }
+                annotation.returnValue = foundReturnValue.node.argument;
+
+                //if (foundReturnValue.node.argument.name) {
+                //    annotation.returnValue = foundReturnValue.node.argument.name;
+                //} else if (foundReturnValue.node.argument.raw) {
+                //    annotation.returnValue = foundReturnValue.node.argument.raw;
+                //}
             } else {
                 annotation.returnValue = undefined;
             }
-            
+
             // Set prefix.
             var codeLine = editor._codeMirror.getLine(annotation.location.start.line - 1);
             annotation.prefix = codeLine.substr(0, codeLine.length - codeLine.trimLeft().length).replace(/[^\s\n]/g, ' ');
-            
+
             // Build annotation string.
             var annotationString = generateString(annotation);
 
             // Insert annotation string into editor.
             insertAnnotation(annotationString, annotation.location);
-            
+
             return true;
         }
         return false;
     }
-    
+
     /**
-     * @desc Generates the string representation of the annotation object. 
+     * Generates the string representation of the annotation object.
      * @param {Object} annotation Annotation object input.
      * @returns {String} Representation of the annotation object.
      */
     function generateString(annotation) {
         var annotationString  = annotation.prefix + '/**\n';
-        
+
         // Add description.
-        annotationString += annotation.prefix + ' * @desc \n';
-        
+        annotationString += annotation.prefix + ' * \n';
+
         // Add parameters.
         annotation.params.forEach(function (param) {
             annotationString += annotation.prefix + ' * @param {type} ' + param + '\n';
         });
-        
+
         // Add return statement.
         if (annotation.returnValue) {
             annotationString += annotation.prefix + ' * @returns {type}\n';
         }
 
-        annotationString += annotation.prefix + ' */\n';
-        
-        return annotationString;   
+        annotationString += annotation.prefix + ' */';
+
+        return annotationString;
     }
-    
+
     /**
-     * @desc Inserts annotation string to document.
+     * Inserts annotation string to document.
      * @param {string} annotationString  Representation of the annotation object.
      * @param {object} loc Location of the function to annotate.
      */
@@ -186,47 +188,47 @@ define(function (require, exports, module) {
         // Get editor instance
         var editor  = EditorManager.getCurrentFullEditor(),
             position = {
-                line: loc.start.line - 1,
+                line: loc.start.line - 2, // Make sure annotation is inserted withoud adding empty lines.
                 ch: 0
             };
-        
+
         // Place annotationString in the editor.
         editor._codeMirror.replaceRange(annotationString, position);
-        
-        // Move cursor on description (@desc) line to edit.
+
+        // Move cursor on description line to edit.
         editor._codeMirror.setCursor({
             line: position.line + 1,
             ch: editor.document.getLine(position.line + 1).length
         });
-        
+
         // Focus on active pane,
         MainViewManager.focusActivePane();
     }
-  
+
     /**
-     * @desc Gets user input snippet and replaces with replacement string.
+     * Gets user input snippet and replaces with replacement string.
      * @param {String} snippet Snippet input that triggers annotation.
      * @param {String} replacement The string we want to replace the snippet with.
      */
     function manipulateSnippet(snippet, replacement) {
-        var editor  = EditorManager.getCurrentFullEditor(),
+        var editor = EditorManager.getCurrentFullEditor(),
             cursorPosition = editor.getCursorPos();
-        
+
         editor.document.replaceRange(replacement, {
             line: cursorPosition.line,
             ch: cursorPosition.ch - snippet.length
         }, cursorPosition);
     }
-    
+
     /**
-	 * @desc The event listener that triggers annotation.
+	 * The event listener that triggers annotation.
 	 * @param {Object} $event
 	 * @param {Object} editor
 	 * @param {Object} event
 	 */
 	function keyEventListener($event, editor, event) {
         isEnabled = prefs.get('enabled');
-        
+
         if (isEnabled) {
             // Check if event type is "keydown" and key is "RETURN".
             if ((event.type === 'keydown') && (event.keyCode === 13)) {
@@ -246,11 +248,11 @@ define(function (require, exports, module) {
                     annotate() && event.preventDefault();
                 }
             }
-        }    
+        }
     }
-    
+
 	/**
-	 * @desc Removes key events from lost editor, adds key events to focused editor.
+	 * Removes key events from lost editor, adds key events to focused editor.
 	 * @param {type} $event
 	 * @param {type} focusedEditor
 	 * @param {type} lostEditor
@@ -262,25 +264,25 @@ define(function (require, exports, module) {
 
         if (focusedEditor) {
             $(focusedEditor).on('keydown', keyEventListener);
-        }    
+        }
 	}
-	
+
     // Initialize extension.
     AppInit.appReady(function () {
         // Register toggle command and add it to Edit menu.
         CommandManager.register(COMMAND_NAME, COMMAND_ID, showRefreshDialog);
         Menus.getMenu(Menus.AppMenuBar.EDIT_MENU).addMenuItem(COMMAND_ID);
-        
+
         // Get extension availability from preferences file.
         isEnabled = prefs.get('enabled');
-        
+
         // Apply preferences.
         applyPreferences();
-        
+
         prefs.on('change', function () {
             applyPreferences();
         });
-        
+
         // Annotate on keystroke.
         if (isEnabled === true) {
             $(EditorManager).on('activeEditorChange', activeEditorChangeHandler);
